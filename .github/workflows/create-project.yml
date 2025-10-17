@@ -56,13 +56,21 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
-              "name": "${{ inputs.project_name }}",
-              "description": "${{ inputs.project_description }}",
-              "tenantId": "${{ inputs.tenant_id }}",
-              "budgetAmount": ${{ inputs.budget_amount }},
-              "budgetPeriod": ${{ inputs.budget_period }},
-              "budgetAlert": ${{ inputs.budget_alert }},
-              "budgetStop": ${{ inputs.budget_stop }}
+              "projectDto": {
+                "name": "${{ inputs.project_name }}",
+                "description": "${{ inputs.project_description }}",
+                "tenantId": "${{ inputs.tenant_id }}",
+                "budgetAmount": ${{ inputs.budget_amount }},
+                "budgetPeriod": ${{ inputs.budget_period }},
+                "budgetAlert": ${{ inputs.budget_alert }},
+                "budgetStop": ${{ inputs.budget_stop }},
+                "models": [],
+                "apiKeys": [],
+                "prompts": [],
+                "memories": [],
+                "pipelines": [],
+                "dataSources": []
+              }
             }' \
             -w "\n%{http_code}" -s)
 
@@ -80,29 +88,30 @@ jobs:
             exit 1
           fi
 
-      - name: Create User Group
-        id: create_group
+      - name: Get User Group ID by Name
+        id: get_group
         run: |
-          response=$(curl -X POST "${{ env.API_BASE_URL }}/v1/Groups" \
+          response=$(curl -X GET "${{ env.API_BASE_URL }}/v1/Groups" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" \
-            -H "x-correlation-id: ${{ github.run_id }}" \
-            -d '{
-              "name": "${{ inputs.user_group_name }}",
-              "description": "User group for project: ${{ inputs.project_name }}"
-            }' \
+            -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" [Person2]correlation-id: ${{ github.run_id }}" \
             -w "\n%{http_code}" -s)
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
 
-          if [ "$http_code" [Person1] 200 ] || [ "$http_code" [Person1] 201 ]; then
-            echo "User group created successfully"
-            group_id=$(echo "$body" | jq -r '.id // .groupId')
+          if [ "$http_code" -eq 200 ]; then
+            echo "Groups retrieved successfully"
+            group_id=$(echo "$body" | jq -r '.[] | select(.name == "${{ inputs.user_group_name }}") | .id // .groupId' | head -n 1)
+
+            if [ -z "$group_id" ] || [ "$group_id" == "null" ]; then
+              echo "User group with name '${{ inputs.user_group_name }}' not found"
+              exit 1
+            fi
+
             echo "group_id=$group_id" >> $GITHUB_OUTPUT
-            echo "Group ID: $group_id"
+            echo "Found Group ID: $group_id"
           else
-            echo "Failed to create user group. HTTP Status: $http_code"
+            echo "Failed to retrieve groups. HTTP Status: $http_code"
             echo "Response: $body"
             exit 1
           fi
