@@ -16,6 +16,10 @@ on:
         description: 'Existing User Group Name'
         required: true
         type: string
+      tenant_id:
+        description: 'Tenant ID'
+        required: true
+        type: string
       budget_amount:
         description: 'Budget Amount (in dollars)'
         required: true
@@ -54,6 +58,7 @@ jobs:
             -d '{
               "name": "${{ inputs.project_name }}",
               "description": "${{ inputs.project_description }}",
+              "tenantId": "${{ inputs.tenant_id }}",
               "budgetAmount": ${{ inputs.budget_amount }},
               "budgetPeriod": ${{ inputs.budget_period }},
               "budgetAlert": ${{ inputs.budget_alert }},
