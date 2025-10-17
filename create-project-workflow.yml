@@ -55,34 +55,27 @@ jobs:
             -H "Content-Type: application/json" \
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
-            -d '{
-              "name": "${{ inputs.project_name }}",
-              "tenantId": "${{ inputs.tenant_id }}",
-              "description": "${{ inputs.project_description }}",
-              "requireClassification": false,
-              "projectType": "Standard",
-              "models": [],
-              "apiKeys": [],
-              "prompts": [],
-              "memories": [],
-              "pipelines": [],
-              "dataSources": []
-            }' \
-            -w "\n%{http_code}" -s)
+            -d @- <<'EOF'
+          {
+            "name": "${{ inputs.project_name }}",
+            "tenantId": "${{ inputs.tenant_id }}",
+            "description": "${{ inputs.project_description }}",
+            "requireClassification": false,
+            "projectType": "Standard",
+            "models": [],
+            "apiKeys": [],
+            "prompts": [],
+            "memories": [],
+            "pipelines": [],
+            "dataSources": []
+          }
+          EOF
+          )
 
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-
-          if [ "$http_code" -eq 201 ] || [ "$http_code" -eq 200 ]; then
-            echo "Project created successfully"
-            project_id=$(echo "$body" | jq -r '.id')
-            echo "project_id=$project_id" >> $GITHUB_OUTPUT
-            echo "Project ID: $project_id"
-          else
-            echo "Failed to create project. HTTP Status: $http_code"
-            echo "Response: $body"
-            exit 1
-          fi
+          echo "Project created successfully"
+          project_id=$(echo "$response" | jq -r '.id')
+          echo "project_id=$project_id" >> $GITHUB_OUTPUT
+          echo "Project ID: $project_id"
 
       - name: Update Project Budget
         id: update_budget
@@ -91,35 +84,28 @@ jobs:
             -H "Content-Type: application/json" \
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
-            -d '{
-              "name": "${{ inputs.project_name }}",
-              "description": "${{ inputs.project_description }}",
-              "tenantId": "${{ inputs.tenant_id }}",
-              "budgetAmount": ${{ inputs.budget_amount }},
-              "budgetPeriod": ${{ inputs.budget_period }},
-              "budgetAlert": ${{ inputs.budget_alert }},
-              "budgetStop": ${{ inputs.budget_stop }},
-              "requireClassification": false,
-              "projectType": "Standard",
-              "models": [],
-              "apiKeys": [],
-              "prompts": [],
-              "memories": [],
-              "pipelines": [],
-              "dataSources": []
-            }' \
-            -w "\n%{http_code}" -s)
+            -d @- <<'EOF'
+          {
+            "name": "${{ inputs.project_name }}",
+            "description": "${{ inputs.project_description }}",
+            "tenantId": "${{ inputs.tenant_id }}",
+            "budgetAmount": ${{ inputs.budget_amount }},
+            "budgetPeriod": ${{ inputs.budget_period }},
+            "budgetAlert": ${{ inputs.budget_alert }},
+            "budgetStop": ${{ inputs.budget_stop }},
+            "requireClassification": false,
+            "projectType": "Standard",
+            "models": [],
+            "apiKeys": [],
+            "prompts": [],
+            "memories": [],
+            "pipelines": [],
+            "dataSources": []
+          }
+          EOF
+          )
 
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-
-          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 204 ]; then
-            echo "Project budget updated successfully"
-          else
-            echo "Failed to update project budget. HTTP Status: $http_code"
-            echo "Response: $body"
-            exit 1
-          fi
+          echo "Project budget updated successfully"
 
       - name: Get User Group ID by Name
         id: get_group
@@ -127,28 +113,17 @@ jobs:
           response=$(curl -X GET "${{ env.API_BASE_URL }}/v1/Groups" \
             -H "Content-Type: application/json" \
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
-            -H "x-correlation-id: ${{ github.run_id }}" \
-            -w "\n%{http_code}" -s)
+            -H "x-correlation-id: ${{ github.run_id }}")
 
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
+          group_id=$(echo "$response" | jq -r '.[] | select(.name == "${{ inputs.user_group_name }}") | .id // .groupId' | head -n 1)
 
-          if [ "$http_code" -eq 200 ]; then
-            echo "Groups retrieved successfully"
-            group_id=$(echo "$body" | jq -r '.[] | select(.name == "${{ inputs.user_group_name }}") | .id // .groupId' | head -n 1)
-
-            if [ -z "$group_id" ] || [ "$group_id" == "null" ]; then
-              echo "User group with name '${{ inputs.user_group_name }}' not found"
-              exit 1
-            fi
-
-            echo "group_id=$group_id" >> $GITHUB_OUTPUT
-            echo "Found Group ID: $group_id"
-          else
-            echo "Failed to retrieve groups. HTTP Status: $http_code"
-            echo "Response: $body"
+          if [ -z "$group_id" ] || [ "$group_id" == "null" ]; then
+            echo "User group with name '${{ inputs.user_group_name }}' not found"
             exit 1
           fi
+
+          echo "group_id=$group_id" >> $GITHUB_OUTPUT
+          echo "Found Group ID: $group_id"
 
       - name: Assign Group to Project
         run: |
@@ -156,23 +131,16 @@ jobs:
             -H "Content-Type: application/json" \
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
-            -d '{
-              "groupId": "${{ steps.get_group.outputs.group_id }}",
-              "roleIds": [],
-              "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
-            }' \
-            -w "\n%{http_code}" -s)
+            -d @- <<'EOF'
+          {
+            "groupId": "${{ steps.get_group.outputs.group_id }}",
+            "roleIds": [],
+            "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
+          }
+          EOF
+          )
 
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-
-          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 201 ] || [ "$http_code" -eq 204 ]; then
-            echo "Group assigned to project successfully"
-          else
-            echo "Failed to assign group to project. HTTP Status: $http_code"
-            echo "Response: $body"
-            exit 1
-          fi
+          echo "Group assigned to project successfully"
 
       - name: Summary
         run: |
