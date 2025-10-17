@@ -51,69 +51,28 @@ jobs:
       - name: Create Project
         id: create_project
         run: |
-          response=$(curl -X POST "${{ env.API_BASE_URL }}/v1/Project" \
-            -H "Content-Type: application/json" \
-            -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
-            -H "x-correlation-id: ${{ github.run_id }}" \
-            -d @- <<'EOF'
-          {
-            "name": "${{ inputs.project_name }}",
-            "tenantId": "${{ inputs.tenant_id }}",
-            "description": "${{ inputs.project_description }}",
-            "requireClassification": false,
-            "projectType": "Standard",
-            "models": [],
-            "apiKeys": [],
-            "prompts": [],
-            "memories": [],
-            "pipelines": [],
-            "dataSources": []
-          }
-          EOF
-          )
+          response=$(curl -s -X POST "${{ env.API_BASE_URL }}/v1/Project" -H'Content-Type: application/json' -H'X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}' -H'x-correlation-id: ${{ github.run_id }}' \
+            -d '{"name":"${{ inputs.project_name }}","tenantId":"${{ inputs.tenant_id }}","description":"${{ inputs.project_description }}","requireClassification":false,"projectType":"Standard","models":[],"apiKeys":[],"prompts":[],"memories":[],"pipelines":[],"dataSources":[]}')
 
-          echo "Project created successfully"
+          echo "Response: $response"
           project_id=$(echo "$response" | jq -r '.id')
           echo "project_id=$project_id" >> $GITHUB_OUTPUT
-          echo "Project ID: $project_id"
+          echo "Project created with ID: $project_id"
 
       - name: Update Project Budget
         id: update_budget
         run: |
-          response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/Project/${{ steps.create_project.outputs.project_id }}" \
-            -H "Content-Type: application/json" \
-            -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
-            -H "x-correlation-id: ${{ github.run_id }}" \
-            -d @- <<'EOF'
-          {
-            "name": "${{ inputs.project_name }}",
-            "description": "${{ inputs.project_description }}",
-            "tenantId": "${{ inputs.tenant_id }}",
-            "budgetAmount": ${{ inputs.budget_amount }},
-            "budgetPeriod": ${{ inputs.budget_period }},
-            "budgetAlert": ${{ inputs.budget_alert }},
-            "budgetStop": ${{ inputs.budget_stop }},
-            "requireClassification": false,
-            "projectType": "Standard",
-            "models": [],
-            "apiKeys": [],
-            "prompts": [],
-            "memories": [],
-            "pipelines": [],
-            "dataSources": []
-          }
-          EOF
-          )
+          response=$(curl -s -X PUT "${{ env.API_BASE_URL }}/v1/Project/${{ steps.create_project.outputs.project_id }}" -H'Content-Type: application/json' \
+            -H 'X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}' -H'x-correlation-id: ${{ github.run_id }}' \
+            -d '{"name":"${{ inputs.project_name }}","tenantId":"${{ inputs.tenant_id }}","description":"${{ inputs.project_description }}","budgetAmount":${{ inputs.budget_amount }},"budgetPeriod":${{ inputs.budget_period }},"budgetAlert":${{ inputs.budget_alert }},"budgetStop":${{ inputs.budget_stop }},"requireClassification":false,"projectType":"Standard","models":[],"apiKeys":[],"prompts":[],"memories":[],"pipelines":[],"dataSources":[]}')
 
+          echo "Budget update response: $response"
           echo "Project budget updated successfully"
 
       - name: Get User Group ID by Name
         id: get_group
         run: |
-          response=$(curl -X GET "${{ env.API_BASE_URL }}/v1/Groups" \
-            -H "Content-Type: application/json" \
-            -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
-            -H "x-correlation-id: ${{ github.run_id }}")
+          response=$(curl -s -X GET "${{ env.API_BASE_URL }}/v1/Groups" -H'Content-Type: application/json' -H'X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}' -H'x-correlation-id: ${{ github.run_id }}')
 
           group_id=$(echo "$response" | jq -r '.[] | select(.name == "${{ inputs.user_group_name }}") | .id // .groupId' | head -n 1)
 
@@ -127,19 +86,10 @@ jobs:
 
       - name: Assign Group to Project
         run: |
-          response=$(curl -X POST "${{ env.API_BASE_URL }}/${{ steps.get_group.outputs.group_id }}/roles" \
-            -H "Content-Type: application/json" \
-            -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
-            -H "x-correlation-id: ${{ github.run_id }}" \
-            -d @- <<'EOF'
-          {
-            "groupId": "${{ steps.get_group.outputs.group_id }}",
-            "roleIds": [],
-            "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
-          }
-          EOF
-          )
+          response=$(curl -s -X POST "${{ env.API_BASE_URL }}/${{ steps.get_group.outputs.group_id }}/roles" -H'Content-Type: application/json' -H'X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}' -H'x-correlation-id: ${{ github.run_id }}' \
+            -d '{"groupId":"${{ steps.get_group.outputs.group_id }}","roleIds":[],"projectIds":["${{ steps.create_project.outputs.project_id }}"]}')
 
+          echo "Group assignment response: $response"
           echo "Group assigned to project successfully"
 
       - name: Summary
