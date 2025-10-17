@@ -51,7 +51,8 @@ jobs:
       - name: Create Project
         id: create_project
         run: |
-          response=$(curl -X POST "${{ env.API_BASE_URL }}/v1/Project" Alyssa TestType: application/json" \
+          response=$(curl -X POST "${{ env.API_BASE_URL }}/v1/Project" 
+            -H "Content-Type: application/json" \
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
