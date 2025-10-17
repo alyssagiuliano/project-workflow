@@ -56,28 +56,24 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
-              "projectDto": {
-                "name": "${{ inputs.project_name }}",
-                "description": "${{ inputs.project_description }}",
-                "tenantId": "${{ inputs.tenant_id }}",
-                "budgetAmount": ${{ inputs.budget_amount }},
-                "budgetPeriod": ${{ inputs.budget_period }},
-                "budgetAlert": ${{ inputs.budget_alert }},
-                "budgetStop": ${{ inputs.budget_stop }},
-                "models": [],
-                "apiKeys": [],
-                "prompts": [],
-                "memories": [],
-                "pipelines": [],
-                "dataSources": []
-              }
+              "name": "${{ inputs.project_name }}",
+              "tenantId": "${{ inputs.tenant_id }}",
+              "description": "${{ inputs.project_description }}",
+              "requireClassification": false,
+              "projectType": "Standard",
+              "models": [],
+              "apiKeys": [],
+              "prompts": [],
+              "memories": [],
+              "pipelines": [],
+              "dataSources": []
             }' \
             -w "\n%{http_code}" -s)
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
 
-          if [ "$http_code" [Person1] 201 ]; then
+          if [ "$http_code" -eq 201 ] || [ "$http_code" -eq 200 ]; then
             echo "Project created successfully"
             project_id=$(echo "$body" | jq -r '.id')
             echo "project_id=$project_id" >> $GITHUB_OUTPUT
@@ -88,12 +84,50 @@ jobs:
             exit 1
           fi
 
+      - name: Update Project Budget
+        id: update_budget
+        run: |
+          response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/Project/${{ steps.create_project.outputs.project_id }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" \
+            -H "x-correlation-id: ${{ github.run_id }}" \
+            -d '{
+              "name": "${{ inputs.project_name }}",
+              "description": "${{ inputs.project_description }}",
+              "tenantId": "${{ inputs.tenant_id }}",
+              "budgetAmount": ${{ inputs.budget_amount }},
+              "budgetPeriod": ${{ inputs.budget_period }},
+              "budgetAlert": ${{ inputs.budget_alert }},
+              "budgetStop": ${{ inputs.budget_stop }},
+              "requireClassification": false,
+              "projectType": "Standard",
+              "models": [],
+              "apiKeys": [],
+              "prompts": [],
+              "memories": [],
+              "pipelines": [],
+              "dataSources": []
+            }' \
+            -w "\n%{http_code}" -s)
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 204 ]; then
+            echo "Project budget updated successfully"
+          else
+            echo "Failed to update project budget. HTTP Status: $http_code"
+            echo "Response: $body"
+            exit 1
+          fi
+
       - name: Get User Group ID by Name
         id: get_group
         run: |
           response=$(curl -X GET "${{ env.API_BASE_URL }}/v1/Groups" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" [Person2]correlation-id: ${{ github.run_id }}" \
+            -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" \
+            -H "x-correlation-id: ${{ github.run_id }}" \
             -w "\n%{http_code}" -s)
 
           http_code=$(echo "$response" | tail -n1)
@@ -118,12 +152,12 @@ jobs:
 
       - name: Assign Group to Project
         run: |
-          response=$(curl -X POST "${{ env.API_BASE_URL }}/${{ steps.create_group.outputs.group_id }}/roles" \
+          response=$(curl -X POST "${{ env.API_BASE_URL }}/${{ steps.get_group.outputs.group_id }}/roles" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
-              "groupId": "${{ steps.create_group.outputs.group_id }}",
+              "groupId": "${{ steps.get_group.outputs.group_id }}",
               "roleIds": [],
               "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
             }' \
@@ -132,7 +166,7 @@ jobs:
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
 
-          if [ "$http_code" [Person1] 200 ] || [ "$http_code" -eq 201 ] || [ "$http_code" -eq 204 ]; then
+          if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 201 ] || [ "$http_code" -eq 204 ]; then
             echo "Group assigned to project successfully"
           else
             echo "Failed to assign group to project. HTTP Status: $http_code"
@@ -147,7 +181,7 @@ jobs:
           echo "- **Project Name:** ${{ inputs.project_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Project ID:** ${{ steps.create_project.outputs.project_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- **User Group:** ${{ inputs.user_group_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Group ID:** ${{ steps.create_group.outputs.group_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Group ID:** ${{ steps.get_group.outputs.group_id }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Budget:** \$${{ inputs.budget_amount }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Budget Period:** ${{ inputs.budget_period }} days" >> $GITHUB_STEP_SUMMARY
           echo "- **Budget Alert:** ${{ inputs.budget_alert }}%" >> $GITHUB_STEP_SUMMARY
