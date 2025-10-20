@@ -99,7 +99,7 @@ jobs:
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
-              "id": "${{ steps.create_project.outputs.project_id }}"
+              "id": "${{ steps.create_project.outputs.project_id }}",
               "name": "${{ inputs.project_name }}",
               "description": "${{ inputs.project_description }}",
               "tenantId": "${{ inputs.tenant_id }}",
