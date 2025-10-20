@@ -164,7 +164,7 @@ jobs:
 
       - name: Assign Group to Project
         run: |
-          response=$(curl -X PUT "${{ env.API_BASE_URL }}/${{ steps.get_group.outputs.group_id }}/roles" \
+          response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/${{ steps.get_group.outputs.group_id }}/roles" \
             -H "Content-Type: application/json" \
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
@@ -173,7 +173,7 @@ jobs:
               "name": "${{ inputs.user_group_name }}"
               "roleIds": ["e79b381e-0c69-4705-bc14-a3fc66d88bf5"],
               "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
-              "userIds": ${{ steps.get_group.outputs.userIds}}
+              "userIds": ["${{ steps.get_group.outputs.userIds}}"]
             }' \
             -w "\n%{http_code}" -s)
 
