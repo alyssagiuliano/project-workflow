@@ -1,4 +1,4 @@
-name: Create Airia Project with User Group and Budget
+name: Create Airia Project (optionally with a User Group and Budget)
 
 on:
   workflow_dispatch:
