@@ -143,7 +143,16 @@ jobs:
 
           if [ "$http_code" -eq 200 ]; then
             echo "Groups retrieved successfully"
-            group_id=$(echo "$body" | jq -r '.[] | select(.name == "${{ inputs.user_group_name }}") | .id // .groupId' | head -n 1)
+            echo "Response body: $body"
+
+            # Check if response is an array or single object
+            if echo "$body" | jq -e 'type == "array"' > /dev/null 2>&1; then
+              # Response is an array
+              group_id=$(echo "$body" | jq -r '.[] | select(.name == "${{ inputs.user_group_name }}") | .id' | head -n 1)
+            else
+              # Response is a single object
+              group_id=$(echo "$body" | jq -r 'if .name == "${{ inputs.user_group_name }}" then .id else empty end')
+            fi
 
             if [ -z "$group_id" ] || [ "$group_id" == "null" ]; then
               echo "User group with name '${{ inputs.user_group_name }}' not found"
@@ -166,7 +175,7 @@ jobs:
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
               "groupId": "${{ steps.get_group.outputs.group_id }}",
-              "roleIds": [],
+              "roleIds": "e79b381e-0c69-4705-bc14-a3fc66d88bf5",
               "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
             }' \
             -w "\n%{http_code}" -s)
