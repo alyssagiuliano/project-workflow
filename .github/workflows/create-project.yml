@@ -76,6 +76,13 @@ jobs:
           if [ "$http_code" -eq 201 ] || [ "$http_code" -eq 200 ]; then
             echo "Project created successfully"
             project_id=$(echo "$body" | jq -r '.id')
+
+            if [ -z "$project_id" ] || [ "$project_id" == "null" ]; then
+              echo "Failed to extract project ID from response"
+              echo "Response: $body"
+              exit 1
+            fi
+
             echo "project_id=$project_id" >> $GITHUB_OUTPUT
             echo "Project ID: $project_id"
           else
