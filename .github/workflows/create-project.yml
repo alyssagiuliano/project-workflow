@@ -170,7 +170,7 @@ jobs:
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
               "groupId": "${{ steps.get_group.outputs.group_id }}",
-              "roleIds": "e79b381e-0c69-4705-bc14-a3fc66d88bf5",
+              "roleIds": "[e79b381e-0c69-4705-bc14-a3fc66d88bf5]",
               "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
             }' \
             -w "\n%{http_code}" -s)
