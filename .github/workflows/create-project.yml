@@ -14,7 +14,7 @@ on:
         default: ''
       user_group_name:
         description: 'Existing User Group Name'
-        required: true
+        required: false
         type: string
       tenant_id:
         description: 'Tenant ID'
@@ -22,23 +22,20 @@ on:
         type: string
       budget_amount:
         description: 'Budget Amount (in dollars)'
-        required: true
+        required: false
         type: string
       budget_period:
         description: 'Budget Period (1 for weekly, 2 for monthly)'
         required: false
         type: string
-        default: '2'
       budget_alert:
         description: 'Budget Alert Percentage (25, 50, 75 or 100)'
         required: false
         type: string
-        default: '100'
       budget_stop:
         description: 'Stop executions when budget is reached'
         required: false
         type: boolean
-        default: true
 
 env:
   API_BASE_URL: https://prodaus.api.airia.ai
@@ -93,6 +90,7 @@ jobs:
 
       - name: Update Project Budget
         id: update_budget
+        if: inputs.budget_amount != ''
         run: |
           response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/Project/${{ steps.create_project.outputs.project_id }}" \
             -H "Content-Type: application/json" \
@@ -131,6 +129,7 @@ jobs:
 
       - name: Get User Group ID by Name
         id: get_group
+        if: inputs.user_group_name != ''
         run: |
           response=$(curl -X GET "${{ env.API_BASE_URL }}/v1/Groups" \
             -H "Content-Type: application/json" \
@@ -187,6 +186,7 @@ jobs:
           fi
 
       - name: Assign Group as Project Admin
+        if: inputs.user_group_name != ''
         run: |
           response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/Groups/${{ steps.get_group.outputs.group_id }}" \
             -H "Content-Type: application/json" \
@@ -218,8 +218,14 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Project Name:** ${{ inputs.project_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Project ID:** ${{ steps.create_project.outputs.project_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **User Group:** ${{ inputs.user_group_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Group ID:** ${{ steps.get_group.outputs.group_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Budget:** \$${{ inputs.budget_amount }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Budget Period:** ${{ inputs.budget_period }} days" >> $GITHUB_STEP_SUMMARY
-          echo "- **Budget Alert:** ${{ inputs.budget_alert }}%" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "${{ inputs.user_group_name }}" ]; then
+            echo "- **User Group:** ${{ inputs.user_group_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Group ID:** ${{ steps.get_group.outputs.group_id }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -n "${{ inputs.budget_amount }}" ]; then
+            echo "- **Budget:** \$${{ inputs.budget_amount }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Budget Period:** ${{ inputs.budget_period }} days" >> $GITHUB_STEP_SUMMARY
+            echo "- **Budget Alert:** ${{ inputs.budget_alert }}%" >> $GITHUB_STEP_SUMMARY
+          fi
