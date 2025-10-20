@@ -156,8 +156,30 @@ jobs:
 
             echo "group_id=$group_id" >> $GITHUB_OUTPUT
             echo "Found Group ID: $group_id"
-            user_ids=$(echo "$body" | jq -c '.items[] | select(.name == "${{ inputs.user_group_name }}") | [.users[].id]')
-            echo "group_id=$group_id" >> $GITHUB_OUTPUT
+
+            # Get detailed group information to extract user IDs
+            group_response=$(curl -X GET "${{ env.API_BASE_URL }}/v1/Groups/$group_id" \
+              -H "Content-Type: application/json" \
+              -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
+              -H "x-correlation-id: ${{ github.run_id }}" \
+              -w "\n%{http_code}" -s)
+
+            group_http_code=$(echo "$group_response" | tail -n1)
+            group_body=$(echo "$group_response" | sed '$d')
+
+            if [ "$group_http_code" -eq 200 ]; then
+              echo "Group details retrieved successfully"
+
+              # Extract user IDs as JSON array from the group response
+              user_ids=$(echo "$group_body" | jq -c '[.users[].id]')
+
+              echo "user_ids=$user_ids" >> $GITHUB_OUTPUT
+              echo "Found User IDs: $user_ids"
+            else
+              echo "Failed to retrieve group details. HTTP Status: $group_http_code"
+              echo "Response: $group_body"
+              exit 1
+            fi
           else
             echo "Failed to retrieve groups. HTTP Status: $http_code"
             echo "Response: $body"
@@ -171,11 +193,11 @@ jobs:
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
-              "id": "${{ steps.get_group.outputs.group_id }}"
-              "name": "${{ inputs.user_group_name }}"
+              "id": "${{ steps.get_group.outputs.group_id }}",
+              "name": "${{ inputs.user_group_name }}",
               "roleIds": ["e79b381e-0c69-4705-bc14-a3fc66d88bf5"],
-              "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
-              "userIds": 
+              "projectIds": ["${{ steps.create_project.outputs.project_id }}"],
+              "userIds": ${{ steps.get_group.outputs.user_ids }}
             }' \
             -w "\n%{http_code}" -s)
 
