@@ -88,6 +88,33 @@ jobs:
             exit 1
           fi
 
+      - name: Set Budget Defaults
+        id: set_budget_defaults
+        if: inputs.budget_amount != ''
+        run: |
+          # Set defaults when budget is provided
+          BUDGET_PERIOD="${{ inputs.budget_period }}"
+          BUDGET_ALERT="${{ inputs.budget_alert }}"
+          BUDGET_STOP="${{ inputs.budget_stop }}"
+
+          # Apply defaults if not explicitly set
+          if [ -z "$BUDGET_PERIOD" ]; then
+            BUDGET_PERIOD="2"
+          fi
+
+          if [ -z "$BUDGET_ALERT" ]; then
+            BUDGET_ALERT="100"
+          fi
+
+          if [ "$BUDGET_STOP" != "true" ] && [ "$BUDGET_STOP" != "false" ]; then
+            BUDGET_STOP="false"
+          fi
+
+          echo "budget_period=$BUDGET_PERIOD" >> $GITHUB_OUTPUT
+          echo "budget_alert=$BUDGET_ALERT" >> $GITHUB_OUTPUT
+          echo "budget_stop=$BUDGET_STOP" >> $GITHUB_OUTPUT
+          echo "Using budget settings: Period=$BUDGET_PERIOD, Alert=$BUDGET_ALERT%, Stop=$BUDGET_STOP"
+
       - name: Update Project Budget
         id: update_budget
         if: inputs.budget_amount != ''
@@ -102,9 +129,9 @@ jobs:
               "description": "${{ inputs.project_description }}",
               "tenantId": "${{ inputs.tenant_id }}",
               "budgetAmount": ${{ inputs.budget_amount }},
-              "budgetPeriod": "${{ inputs.budget_period }}",
-              "budgetAlert": "${{ inputs.budget_alert }}",
-              "budgetStop": ${{ inputs.budget_stop }},
+              "budgetPeriod": "${{ steps.set_budget_defaults.outputs.budget_period }}",
+              "budgetAlert": "${{ steps.set_budget_defaults.outputs.budget_alert }}",
+              "budgetStop": ${{ steps.set_budget_defaults.outputs.budget_stop }},
               "requireClassification": false,
               "projectType": "Standard",
               "models": [],
@@ -226,6 +253,7 @@ jobs:
 
           if [ -n "${{ inputs.budget_amount }}" ]; then
             echo "- **Budget:** \$${{ inputs.budget_amount }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Budget Period:** ${{ inputs.budget_period }} days" >> $GITHUB_STEP_SUMMARY
-            echo "- **Budget Alert:** ${{ inputs.budget_alert }}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Budget Period:** ${{ steps.set_budget_defaults.outputs.budget_period }} (1=weekly, 2=monthly)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Budget Alert:** ${{ steps.set_budget_defaults.outputs.budget_alert }}%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Budget Stop:** ${{ steps.set_budget_defaults.outputs.budget_stop }}" >> $GITHUB_STEP_SUMMARY
           fi
