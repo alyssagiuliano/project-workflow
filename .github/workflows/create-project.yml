@@ -144,7 +144,7 @@ jobs:
           if [ "$http_code" -eq 200 ]; then
             echo "Groups retrieved successfully"
 
-            # Extract group ID from items array
+            # Extract group ID and user IDs from items array
             group_id=$(echo "$body" | jq -r '.items[] | select(.name == "${{ inputs.user_group_name }}") | .id' | head -n 1)
 
             if [ -z "$group_id" ] || [ "$group_id" == "null" ]; then
@@ -154,15 +154,20 @@ jobs:
               exit 1
             fi
 
+            # Extract user IDs as JSON array
+            user_ids=$(echo "$body" | jq -c '.items[] | select(.name == "${{ inputs.user_group_name }}") | [.users[]?.id // empty]')
+
             echo "group_id=$group_id" >> $GITHUB_OUTPUT
+            echo "user_ids=$user_ids" >> $GITHUB_OUTPUT
             echo "Found Group ID: $group_id"
+            echo "Found User IDs: $user_ids"
           else
             echo "Failed to retrieve groups. HTTP Status: $http_code"
             echo "Response: $body"
             exit 1
           fi
 
-      - name: Assign Group to Project
+      - name: Assign Group as Project Admin
         run: |
           response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/${{ steps.get_group.outputs.group_id }}" \
             -H "Content-Type: application/json" \
@@ -173,7 +178,7 @@ jobs:
               "name": "${{ inputs.user_group_name }}"
               "roleIds": ["e79b381e-0c69-4705-bc14-a3fc66d88bf5"],
               "projectIds": ["${{ steps.create_project.outputs.project_id }}"]
-              "userIds": ["${{ steps.get_group.outputs.userIds}}"]
+              "userIds": 
             }' \
             -w "\n%{http_code}" -s)
 
