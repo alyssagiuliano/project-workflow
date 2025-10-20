@@ -154,8 +154,8 @@ jobs:
               exit 1
             fi
 
-            # Extract user IDs as JSON array
-            user_ids=$(echo "$body" | jq -c '.items[] | select(.name == "${{ inputs.user_group_name }}") | [.users[]?.id // empty]')
+            # Extract user IDs as JSON array - map each user's id into an array
+            user_ids=$(echo "$body" | jq -c '[.items[] | select(.name == "${{ inputs.user_group_name }}") | .users[]?.id] | map(select(. != null))')
 
             echo "group_id=$group_id" >> $GITHUB_OUTPUT
             echo "user_ids=$user_ids" >> $GITHUB_OUTPUT
