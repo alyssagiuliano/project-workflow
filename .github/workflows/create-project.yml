@@ -164,7 +164,7 @@ jobs:
 
       - name: Assign Group to Project
         run: |
-          response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/${{ steps.get_group.outputs.group_id }} \
+          response=$(curl -X PUT "${{ env.API_BASE_URL }}/v1/${{ steps.get_group.outputs.group_id }}" \
             -H "Content-Type: application/json" \
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
