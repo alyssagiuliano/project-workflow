@@ -156,6 +156,8 @@ jobs:
 
             echo "group_id=$group_id" >> $GITHUB_OUTPUT
             echo "Found Group ID: $group_id"
+            user_ids=$(echo "$body" | jq -c '.items[] | select(.name == "${{ inputs.user_group_name }}") | [.users[].id]')
+            echo "group_id=$group_id" >> $GITHUB_OUTPUT
           else
             echo "Failed to retrieve groups. HTTP Status: $http_code"
             echo "Response: $body"
