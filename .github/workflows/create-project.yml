@@ -143,19 +143,14 @@ jobs:
 
           if [ "$http_code" -eq 200 ]; then
             echo "Groups retrieved successfully"
-            echo "Response body: $body"
 
-            # Check if response is an array or single object
-            if echo "$body" | jq -e 'type == "array"' > /dev/null 2>&1; then
-              # Response is an array
-              group_id=$(echo "$body" | jq -r '.[] | select(.name == "${{ inputs.user_group_name }}") | .id' | head -n 1)
-            else
-              # Response is a single object
-              group_id=$(echo "$body" | jq -r 'if .name == "${{ inputs.user_group_name }}" then .id else empty end')
-            fi
+            # Extract group ID from items array
+            group_id=$(echo "$body" | jq -r '.items[] | select(.name == "${{ inputs.user_group_name }}") | .id' | head -n 1)
 
             if [ -z "$group_id" ] || [ "$group_id" == "null" ]; then
               echo "User group with name '${{ inputs.user_group_name }}' not found"
+              echo "Available groups:"
+              echo "$body" | jq -r '.items[] | .name'
               exit 1
             fi
 
