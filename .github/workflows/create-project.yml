@@ -25,12 +25,12 @@ on:
         required: true
         type: string
       budget_period:
-        description: 'Budget Period (in days)'
+        description: 'Budget Period (1 for weekly, 2 for monthly)'
         required: false
         type: string
         default: '30'
       budget_alert:
-        description: 'Budget Alert Percentage'
+        description: 'Budget Alert Percentage (25, 50, 75 or 100)'
         required: false
         type: string
         default: '80'
@@ -103,8 +103,8 @@ jobs:
               "description": "${{ inputs.project_description }}",
               "tenantId": "${{ inputs.tenant_id }}",
               "budgetAmount": ${{ inputs.budget_amount }},
-              "budgetPeriod": ${{ inputs.budget_period }},
-              "budgetAlert": ${{ inputs.budget_alert }},
+              "budgetPeriod": "${{ inputs.budget_period }}",
+              "budgetAlert": "${{ inputs.budget_alert }}",
               "budgetStop": ${{ inputs.budget_stop }},
               "requireClassification": false,
               "projectType": "Standard",
