@@ -28,12 +28,12 @@ on:
         description: 'Budget Period (1 for weekly, 2 for monthly)'
         required: false
         type: string
-        default: '30'
+        default: '2'
       budget_alert:
         description: 'Budget Alert Percentage (25, 50, 75 or 100)'
         required: false
         type: string
-        default: '80'
+        default: '100'
       budget_stop:
         description: 'Stop executions when budget is reached'
         required: false
@@ -99,6 +99,7 @@ jobs:
             -H "X-API-KEY: ${{ secrets.AIRIA_API_TOKEN }}" \
             -H "x-correlation-id: ${{ github.run_id }}" \
             -d '{
+              "id": "${{ steps.create_project.outputs.project_id }}"
               "name": "${{ inputs.project_name }}",
               "description": "${{ inputs.project_description }}",
               "tenantId": "${{ inputs.tenant_id }}",
